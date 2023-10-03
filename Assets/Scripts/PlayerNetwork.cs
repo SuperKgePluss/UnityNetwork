@@ -33,11 +33,13 @@ public class PlayerNetwork : NetworkBehaviour {
         if (!IsOwner) return;
 
         if (Input.GetKeyDown(KeyCode.T)) {
-            randomNumber.Value = new MyCustomData {
+            TestServerRpc(new ServerRpcParams());
+
+            /*randomNumber.Value = new MyCustomData {
                 _int = 10,
                 _bool = false,
                 message = "APPPPPP",
-            };
+            };*/
         }
 
         Vector3 moveDir = new Vector3(0, 0, 0);
@@ -49,5 +51,10 @@ public class PlayerNetwork : NetworkBehaviour {
 
         float moveSpeed = 3f;
         transform.position += moveDir * moveSpeed * Time.deltaTime;
+    }
+
+    [ServerRpc]
+    void TestServerRpc(ServerRpcParams serverRpcParams) {
+        Debug.Log("TestServerRpc " + OwnerClientId + ", " + serverRpcParams.Receive.SenderClientId);
     }
 }
