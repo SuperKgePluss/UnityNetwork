@@ -200,4 +200,25 @@ public class TestLobby : MonoBehaviour {
             Debug.Log(e);
         }
     }
+
+    async void MigrateLobbyHost() {
+        try {
+            hostLobby = await Lobbies.Instance.UpdateLobbyAsync(hostLobby.Id, new UpdateLobbyOptions {
+                HostId = joinedLobby.Players[1].Id
+            });
+            joinedLobby = hostLobby;
+
+            PrintPlayers(hostLobby);
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
+        }
+    }
+
+    async void DeleteLobby() {
+        try {
+            await LobbyService.Instance.DeleteLobbyAsync(joinedLobby.Id);
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
+        }
+    }
 }
