@@ -7,6 +7,7 @@ using UnityEngine;
 public class TestLobby : MonoBehaviour {
     Lobby hostLobby;
     float heartbeatTimer;
+    string playerName;
 
     private async void Start() {
         await UnityServices.InitializeAsync();
@@ -14,6 +15,9 @@ public class TestLobby : MonoBehaviour {
             Debug.Log("Sign in " + AuthenticationService.Instance.PlayerId);
         };
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+        playerName = "CrystalMind" + Random.Range(10, 99);
+        Debug.Log(playerName);
     }
 
     private void Update() {
@@ -26,7 +30,8 @@ public class TestLobby : MonoBehaviour {
             ListLobbies();
         }
         if (Input.GetKeyDown(KeyCode.J)) {
-            JoinLobby();
+            QuickJoinLobby();
+            //JoinLobbyByCode();
         }
     }
 
@@ -46,11 +51,16 @@ public class TestLobby : MonoBehaviour {
         try {
             string lobbyName = "MyLobby";
             int maxPlayers = 4;
-            Lobby lobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers);
+            CreateLobbyOptions createLobbyOptions = new CreateLobbyOptions {
+                IsPrivate = false,
+                Player = GetPlayer()
+            };
+            Lobby lobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, createLobbyOptions);
 
             hostLobby = lobby;
 
-            Debug.Log("Create Lobby! " + lobby.Name + " " + lobby.MaxPlayers);
+            PrintPlayer(hostLobby);
+            Debug.Log("Create Lobby! " + lobby.Name + " " + lobby.MaxPlayers + " " + lobby.Id + " " + lobby.LobbyCode);
         } catch (LobbyServiceException e) {
             Debug.Log(e);
         }
@@ -79,13 +89,42 @@ public class TestLobby : MonoBehaviour {
         }
     }
 
-    async void JoinLobby() {
+    async void JoinLobbyByCode(string lobbyCode) {
         try {
-            QueryResponse queryResponse = await Lobbies.Instance.QueryLobbiesAsync();
+            JoinLobbyByCodeOptions joinLobbyByCodeOptions = new JoinLobbyByCodeOptions {
+                Player = GetPlayer()
+            };
+            //QueryResponse queryResponse = await Lobbies.Instance.QueryLobbiesAsync();
+            Lobby joinedLobby = await Lobbies.Instance.JoinLobbyByCodeAsync(lobbyCode, joinLobbyByCodeOptions);
 
-            await Lobbies.Instance.JoinLobbyByIdAsync(queryResponse.Results[0].Id);
+            Debug.Log("Joined lobby with code " + lobbyCode);
+
+            PrintPlayer(joinedLobby);
         } catch (LobbyServiceException e) {
             Debug.Log(e);
+        }
+    }
+
+    async void QuickJoinLobby() {
+        try {
+            await LobbyService.Instance.QuickJoinLobbyAsync();
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
+        }
+    }
+
+    Player GetPlayer() {
+        return new Player {
+            Data = new System.Collections.Generic.Dictionary<string, PlayerDataObject> {
+                { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, playerName) }
+            }
+        };
+    }
+
+    void PrintPlayer(Lobby lobby) {
+        Debug.Log("Players in Lobby " + lobby.Name);
+        foreach (Player player in lobby.Players) {
+            Debug.Log(player.Id + " " + player.Data["PlayerName"].Value);
         }
     }
 }
