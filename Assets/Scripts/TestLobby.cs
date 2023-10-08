@@ -6,7 +6,9 @@ using UnityEngine;
 
 public class TestLobby : MonoBehaviour {
     Lobby hostLobby;
+    Lobby joinedLobby;
     float heartbeatTimer;
+    float lobbyUpdateTimer;
     string playerName;
 
     private async void Start() {
@@ -22,6 +24,7 @@ public class TestLobby : MonoBehaviour {
 
     private void Update() {
         HandleLobbyHearthbeat();
+        HandleLobbyPollForUpdates();
 
         if (Input.GetKeyDown(KeyCode.L)) {
             CreateLobby();
@@ -32,6 +35,9 @@ public class TestLobby : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.J)) {
             QuickJoinLobby();
             //JoinLobbyByCode();
+        }
+        if (Input.GetKeyDown(KeyCode.U)) {
+            //UpdateLobbyGameMode();
         }
     }
 
@@ -47,19 +53,37 @@ public class TestLobby : MonoBehaviour {
         }
     }
 
+    async void HandleLobbyPollForUpdates() {
+        if (joinedLobby != null) {
+            lobbyUpdateTimer -= Time.deltaTime;
+            if (lobbyUpdateTimer < 0f) {
+                float lobbyUpdateTimerMax = 1.1f;
+                lobbyUpdateTimer = lobbyUpdateTimerMax;
+
+                Lobby lobby = await LobbyService.Instance.GetLobbyAsync(joinedLobby.Id);
+                joinedLobby = lobby;
+            }
+        }
+    }
+
     async void CreateLobby() {
         try {
             string lobbyName = "MyLobby";
             int maxPlayers = 4;
             CreateLobbyOptions createLobbyOptions = new CreateLobbyOptions {
                 IsPrivate = false,
-                Player = GetPlayer()
+                Player = GetPlayer(),
+                Data = new System.Collections.Generic.Dictionary<string, DataObject> {
+                    { "GameMode", new DataObject(DataObject.VisibilityOptions.Public, "CaptureTheFlag") },
+                    { "Map", new DataObject(DataObject.VisibilityOptions.Public, "de_dust2") }
+                }
             };
             Lobby lobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, createLobbyOptions);
 
             hostLobby = lobby;
+            joinedLobby = hostLobby;
 
-            PrintPlayer(hostLobby);
+            PrintPlayers(hostLobby);
             Debug.Log("Create Lobby! " + lobby.Name + " " + lobby.MaxPlayers + " " + lobby.Id + " " + lobby.LobbyCode);
         } catch (LobbyServiceException e) {
             Debug.Log(e);
@@ -82,7 +106,7 @@ public class TestLobby : MonoBehaviour {
 
             Debug.Log("Lobbies found: " + queryResponse.Results.Count);
             foreach (Lobby lobby in queryResponse.Results) {
-                Debug.Log(lobby.Name + " " + lobby.MaxPlayers);
+                Debug.Log(lobby.Name + " " + lobby.MaxPlayers + " " + lobby.Data["GameMode"].Value);
             }
         } catch (LobbyServiceException e) {
             Debug.Log(e);
@@ -95,11 +119,12 @@ public class TestLobby : MonoBehaviour {
                 Player = GetPlayer()
             };
             //QueryResponse queryResponse = await Lobbies.Instance.QueryLobbiesAsync();
-            Lobby joinedLobby = await Lobbies.Instance.JoinLobbyByCodeAsync(lobbyCode, joinLobbyByCodeOptions);
+            Lobby lobby = await Lobbies.Instance.JoinLobbyByCodeAsync(lobbyCode, joinLobbyByCodeOptions);
+            joinedLobby = lobby;
 
             Debug.Log("Joined lobby with code " + lobbyCode);
 
-            PrintPlayer(joinedLobby);
+            PrintPlayers(lobby);
         } catch (LobbyServiceException e) {
             Debug.Log(e);
         }
@@ -121,10 +146,29 @@ public class TestLobby : MonoBehaviour {
         };
     }
 
-    void PrintPlayer(Lobby lobby) {
-        Debug.Log("Players in Lobby " + lobby.Name);
+    void PrintPlayers() {
+        PrintPlayers(joinedLobby);
+    }
+
+    void PrintPlayers(Lobby lobby) {
+        Debug.Log("Players in Lobby " + lobby.Name + " " + lobby.Data["GameMode"].Value + lobby.Data["Map"].Value);
         foreach (Player player in lobby.Players) {
             Debug.Log(player.Id + " " + player.Data["PlayerName"].Value);
+        }
+    }
+
+    async void UpdateLobbyGameMode(string gameMode) {
+        try {
+            hostLobby = await Lobbies.Instance.UpdateLobbyAsync(hostLobby.Id, new UpdateLobbyOptions {
+                Data = new System.Collections.Generic.Dictionary<string, DataObject> {
+                { "GameMode", new DataObject(DataObject.VisibilityOptions.Public, gameMode) }
+            }
+            });
+            joinedLobby = hostLobby;
+
+            PrintPlayers(hostLobby);
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
         }
     }
 }
