@@ -171,4 +171,33 @@ public class TestLobby : MonoBehaviour {
             Debug.Log(e);
         }
     }
+
+    async void UpdatePlayerName(string newPlayerName) {
+        try {
+            playerName = newPlayerName;
+            await LobbyService.Instance.UpdatePlayerAsync(joinedLobby.Id, AuthenticationService.Instance.PlayerId, new UpdatePlayerOptions {
+                Data = new System.Collections.Generic.Dictionary<string, PlayerDataObject> {
+                { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, playerName) }
+            }
+            });
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
+        }
+    }
+
+    async void LeaveLobby() {
+        try {
+            await LobbyService.Instance.RemovePlayerAsync(joinedLobby.Id, AuthenticationService.Instance.PlayerId);
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
+        }
+    }
+
+    async void KickPlayer() {
+        try {
+            await LobbyService.Instance.RemovePlayerAsync(joinedLobby.Id, joinedLobby.Players[1].Id);
+        } catch (LobbyServiceException e) {
+            Debug.Log(e);
+        }
+    }
 }
