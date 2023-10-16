@@ -4,7 +4,7 @@ using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
-public class TestLobby : MonoBehaviour {
+public class BasicLobby : MonoBehaviour {
     Lobby hostLobby;
     Lobby joinedLobby;
     float heartbeatTimer;
